@@ -84,3 +84,12 @@ covariance_matrix = {
         "Cash": 0.0001
     }
 }
+
+# WPW ETF Proxies for asset class performance
+etf_proxies = {
+    "US Equity": "VTI",               # Total US Market
+    "Intl Equity": "VXUS",            # Total Intl Market
+    "Emerging Markets": "VWO",        # EM Stocks
+    "Bonds": "BND",                   # US Aggregate Bond
+    "Cash": "SHV"                     # Short-term Treasuries (proxy for cash)
+}
