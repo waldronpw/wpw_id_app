@@ -1,4 +1,5 @@
 import streamlit as st
+from src.utils.formatter import parse_dollar_input
 from src.portfolio.monte_carlo import monte_carlo_simulation
 
 
@@ -15,16 +16,16 @@ with st.form("mc_form"):
     col1, col2 = st.columns(2)
 
     with col1:
-        current_assets = st.number_input("Current Portfolio Value ($)", min_value=0, value=500000, step=10000)
-        annual_contribution = st.number_input("Annual Contribution ($)", min_value=0, value=10000, step=1000)
+        current_assets = parse_dollar_input("Current Portfolio Value ($)", 500_000)
+        annual_contribution = parse_dollar_input("Annual Contribution ($)", 10_000)
         investment_horizon = st.number_input("Investment Horizon (Years)", min_value=1, value=30)
         expected_return = st.number_input("Expected Annual Return (%)", value=6.0) / 100
 
     with col2:
-        asset_goal = st.number_input("Future Asset Goal ($)", min_value=0, value=2000000, step=50000)
-        annual_withdrawal = st.number_input("Annual Withdrawal ($)", min_value=0, value=0, step=1000)
+        asset_goal = parse_dollar_input("Future Asset Goal ($)", 2_000_000)
+        annual_withdrawal = parse_dollar_input("Annual Withdrawal ($)", 0)
         expected_volatility = st.number_input("Expected Volatility (%)", value=12.0) / 100
-        inflation_rate = st.number_input("Inflation Rate (%)", value=2.5) / 100
+        inflation_rate = st.number_input("Inflation Rate (%)", value=2.58) / 100
 
     submitted = st.form_submit_button("Run Simulation")
 
