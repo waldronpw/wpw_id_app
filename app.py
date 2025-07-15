@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.portfolio.portfolio_class import Portfolio
 from src.utils.charting import plot_pie
-from config.cme import capital_market_expectations, covariance_matrix, etf_proxies
+from config.cme import capital_market_expectations, covariance_matrix, etf_proxies, models
 
 
 st.set_page_config(
@@ -29,25 +29,51 @@ if page == "Portfolio Analysis":
     st.title("Portfolio Risk and Return Analysis")
     st.caption("Compare a current vs. proposed portfolio, caclulate expected rates of return and volatility for selected asset classes, and calculate risk metrics.")
 
+    # Select model (outside of form so it updates immediately)
+    selected_model = st.selectbox(
+        "Select a Model Portfolio for Proposed Allocation",
+        options=["Custom"] + list(models.keys()),
+        index=0
+    )
+
+    # Now derive the model allocations right away
+    if selected_model != "Custom":
+        model_alloc = models[selected_model]
+    else:
+        model_alloc = {k: 0.0 for k in ["US Equity", "Intl Equity", "Emerging Markets", "Bonds", "Cash"]}
+
     with st.form("current_portfolio_form"):
         st.subheader("Define Portfolio Allocations:")
+        # selected_model = st.selectbox(
+        #     "Select a Risk-based Portfolio for Proposed Allocation",
+        #     options=["Custom"] + list(models.keys()),
+        #     index=0
+        # )
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Current Asset Allocation")
-            dom_eq = st.number_input("US Equity (%)")
-            intl_eq = st.number_input("International Equity (%)")
-            em_eq = st.number_input("Emerging Markets Equity (%)")
-            bonds = st.number_input("Fixed Income (%)")
-            cash = st.number_input("Cash (%)")
+            st.subheader("Current")
+            dom_eq = st.slider("US Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            intl_eq = st.slider("International Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            em_eq = st.slider("Emerging Markets Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            bonds = st.slider("Fixed Income", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            cash = st.slider("Cash (%)", min_value=0, max_value=100, format="%0.1f%%", value=20)
         
         with col2:
-            st.subheader("Proposed Asset Allocation")
-            dom_eq_prop = st.number_input("US Equity (%)", key="us_prop")
-            intl_eq_prop = st.number_input("International Equity (%)", key="intl_prop")
-            em_eq_prop = st.number_input("Emerging Markets Equity (%)", key="em_prop")
-            bonds_prop = st.number_input("Fixed Income (%)", key="fi_prop")
-            cash_prop = st.number_input("Cash (%)", key="cash_prop")
+            st.subheader("Proposed")
+
+            # if selected_model != "Custom":
+            #     model_alloc = models[selected_model]
+            # else:
+            #     model_alloc = {k: 0.0 for k in ["US Equity", "Intl Equity", "Emerging Markets", "Bonds", "Cash"]}
+            
+            disabled = selected_model != "Custom"
+
+            dom_eq_prop = st.slider("US Equity", 0, 100, int(model_alloc["US Equity"] * 100), key="us_prop", disabled=disabled)
+            intl_eq_prop = st.slider("International Equity", 0, 100, int(model_alloc["Intl Equity"] * 100), key="intl_prop", disabled=disabled)
+            em_eq_prop = st.slider("Emerging Markets Equity", 0, 100, int(model_alloc["Emerging Markets"] * 100), key="em_prop", disabled=disabled)
+            bonds_prop = st.slider("Fixed Income", 0, 100, int(model_alloc["Bonds"] * 100), key="bonds_prop", disabled=disabled)
+            cash_prop = st.slider("Cash (%)", 0, 100, int(model_alloc["Cash"] * 100), key="cash_prop", disabled=disabled)
 
         submit = st.form_submit_button("Create Portfolios")
     
@@ -102,10 +128,10 @@ if page == "Portfolio Analysis":
             colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']  # consistent asset class colors
 
             # Create two pie charts side by side
-            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+            fig, axes = plt.subplots(1, 2, figsize=(8, 2))
 
-            plot_pie(current_alloc, "Current Portfolio", ax=axes[0], colors=colors)
-            plot_pie(proposed_alloc, "Proposed Portfolio", ax=axes[1], colors=colors)
+            plot_pie(current_alloc, "Current", ax=axes[0], colors=colors)
+            plot_pie(proposed_alloc, "Proposed", ax=axes[1], colors=colors)
 
             # Shared legend below
             fig.legend(
@@ -113,22 +139,12 @@ if page == "Portfolio Analysis":
                 loc="lower center",
                 bbox_to_anchor=(0.5, -0.15),
                 ncol=5,
-                frameon=False
+                frameon=False,
+                fontsize=6
             )
 
             plt.tight_layout()
             st.pyplot(fig)
-
-            # col1, col2 = st.columns(2)
-            # with col1:
-            #     st.markdown("##### Current Portfolio")
-            #     fig1 = plot_pie(current_alloc, "Current Allocation")
-            #     st.pyplot(fig1)
-
-            # with col2:
-            #     st.markdown("##### Proposed Portfolio")
-            #     fig2 = plot_pie(proposed_alloc, "Proposed Allocation")
-            #     st.pyplot(fig2)
             
             st.markdown("###")
             st.divider()
@@ -142,39 +158,33 @@ if page == "Portfolio Analysis":
             
             with col2:
                 col2.metric("Expected Return", f"{exp_ret:.2%}" if exp_ret else "N/A")
-                # col2.metric("Expected Return", f"{exp_ret_prop:.2%}" if exp_ret_prop else "N/A")
-                col2.metric(label="", value=f"{exp_ret_prop:.2%}" if exp_ret_prop else "N/A")
+                col2.metric(label="", value=f"{exp_ret_prop:.2%}" if exp_ret_prop else "N/A", delta=f"{(exp_ret_prop - exp_ret):.2%}", delta_color="normal")
             
             with col3:
                 col3.metric("Expected Volatility", f"{exp_std:.2%}" if exp_std else "N/A")
-                # col3.metric("Expected Volatility", f"{exp_std_prop:.2%}" if exp_std_prop else "N/A")
-                col3.metric(label="", value=f"{exp_std_prop:.2%}" if exp_std_prop else "N/A")
+                col3.metric(label="", value=f"{exp_std_prop:.2%}" if exp_std_prop else "N/A", delta=f"{(exp_std_prop - exp_std):.2%}", delta_color="inverse")
             
             with col4:
                 col4.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}" if sharpe_ratio else "N/A")
-                # col4.metric("Sharpe Ratio", f"{sharpe_ratio_prop:.2f}" if sharpe_ratio_prop else "N/A")
-                col4.metric(label="", value=f"{sharpe_ratio_prop:.2f}" if sharpe_ratio_prop else "N/A")
+                col4.metric(label="", value=f"{sharpe_ratio_prop:.2f}" if sharpe_ratio_prop else "N/A", delta=f"{(sharpe_ratio_prop - sharpe_ratio):.2f}", delta_color="normal")
             
             with col5:
                 col5.metric("CVaR", f"{cvar:.2%}" if cvar else "N/A")
-                # col5.metric("CVaR", f"{cvar_prop:.2%}" if cvar_prop else "N/A")
-                col5.metric(label="", value=f"{cvar_prop:.2%}" if cvar_prop else "N/A")
+                col5.metric(label="", value=f"{cvar_prop:.2%}" if cvar_prop else "N/A", delta=f"{(cvar_prop - cvar):.2%}", delta_color="normal")
             
             with col6:
                 col6.metric("Max Drawdown", f"{max_dd["max_drawdown"]:.2%}" if max_dd else "N/A")
-                # col6.metric("Max Drawdown", f"{max_dd_prop["max_drawdown"]:.2%}" if max_dd_prop else "N/A")
-                col6.metric(label="", value=f"{max_dd_prop["max_drawdown"]:.2%}" if max_dd_prop else "N/A")
+                col6.metric(label="", value=f"{max_dd_prop["max_drawdown"]:.2%}" if max_dd_prop else "N/A", delta=f"{(max_dd_prop["max_drawdown"] - max_dd["max_drawdown"]):.2%}", delta_color="normal")
             
             with col7:
                 col7.metric("Recovery", f"{max_dd["recovery_months"]:.0f} months" if max_dd else "N/A")
-                # col7.metric("Recovery", f"{max_dd_prop["recovery_months"]:.0f} months" if max_dd_prop else "N/A")
-                col7.metric(label="", value=f"{max_dd_prop["recovery_months"]:.0f} months" if max_dd_prop else "N/A")
+                col7.metric(label="", value=f"{max_dd_prop["recovery_months"]:.0f} months" if max_dd_prop else "N/A", delta=f"{(max_dd_prop["recovery_months"] - max_dd["recovery_months"]):.0f} months", delta_color="inverse")
 
         st.markdown("###")
         st.divider()
         st.markdown("###")
 
-        st.subheader("📈 Growth of $100,000: Current vs Proposed Portfolio")
+        st.subheader("Growth of $100,000: Current vs Proposed Portfolio")
         start_value = 100_000
         returns_df = (
             pd.DataFrame({
@@ -189,18 +199,50 @@ if page == "Portfolio Analysis":
         fig, ax = plt.subplots(figsize=(10, 4))
         cumulative.plot(ax=ax)
 
+        ax.set_xlabel("")
+
         ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('${x:,.0f}'))
         ax.spines["top"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
         ax.spines["left"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        ax.tick_params(axis="both", labelsize=6)
         ax.tick_params(axis="x", which="both", length=0)
         ax.tick_params(axis="y", which="both", length=0)
         ax.grid(True, axis="y", alpha=0.3)
-        ax.legend()
+        ax.legend(frameon=False, fontsize=6)
         ax.tick_params(axis="x", labelrotation=0)
 
         st.pyplot(fig)
+
+
+        st.markdown("###")
+        st.divider()
+        st.markdown("###")
+
+        st.subheader("Drawdown Analysis: Current vs Proposed Portfolio")
+
+        drawdown = cumulative / cumulative.cummax() - 1
+
+        fig_dd, ax_dd = plt.subplots(figsize=(10, 4))
+        for col in drawdown.columns:
+            line, = ax_dd.plot(drawdown.index, drawdown[col], label=col)
+            ax_dd.fill_between(drawdown.index, drawdown[col], 0, color=line.get_color(), alpha=0.2)
+
+        # ax_dd.set_ylabel("Drawdown", fontsize=9)
+        ax_dd.set_xlabel("")
+        ax_dd.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+        ax_dd.spines["top"].set_visible(False)
+        ax_dd.spines["bottom"].set_visible(False)
+        ax_dd.spines["left"].set_visible(False)
+        ax_dd.spines["right"].set_visible(False)
+        ax_dd.tick_params(axis="both", labelsize=6)
+        ax_dd.tick_params(axis="x", which="both", length=0)
+        ax_dd.tick_params(axis="y", which="both", length=0)
+        ax_dd.grid(True, axis="y", alpha=0.3)
+        ax_dd.legend(frameon=False, fontsize=6)
+
+        st.pyplot(fig_dd)
 
 
 

@@ -20,7 +20,7 @@ def plot_pie(data: dict, title: str, ax=None, colors=None):
 
     # Make it a circle and set title
     ax.axis("equal")
-    ax.set_title(title, fontsize=12)
+    ax.set_title(title, fontsize=9)
 
     # Return fig only if created here
     if fig:
