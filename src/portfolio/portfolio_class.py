@@ -289,7 +289,7 @@ class Portfolio:
                 'recovery_months': int or None
             }
         """
-        if self.historical_returns is None:
+        if self.historical_returns is None or self.historical_returns.empty:
             print("No historical return data. Please run simulate_historical_performance() first.")
             return None
 
@@ -297,8 +297,13 @@ class Portfolio:
         peak = cumulative.cummax()
         drawdown = (cumulative - peak) / peak
 
+        if drawdown.empty or drawdown.isna().all():
+            print("Drawdown series is empty or all NaNs.")
+            return None
+
         min_dd = drawdown.min()
         dd_end = drawdown.idxmin()
+
         dd_start_candidates = cumulative[:dd_end][cumulative[:dd_end] == peak[:dd_end]].index
         dd_start = dd_start_candidates[-1] if not dd_start_candidates.empty else drawdown.index[0]
 
@@ -307,13 +312,16 @@ class Portfolio:
         recovery_date = recovery[recovery >= peak[dd_start]].index
         recovery_date = recovery_date[0] if not recovery_date.empty else None
 
-        recovery = (recovery_date.to_period("M") - dd_start.to_period("M")).n if recovery_date else None
+        recovery_months = (
+            (recovery_date.to_period("M") - dd_start.to_period("M")).n
+            if recovery_date else None
+        )
 
         return {
             "max_drawdown": min_dd,
             "start_date": dd_start,
             "recovery_date": recovery_date,
-            "recovery_months": recovery
+            "recovery_months": recovery_months
         }
     
     def summarize_backtest(self) -> None:
