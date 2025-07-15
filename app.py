@@ -31,7 +31,7 @@ if page == "Portfolio Analysis":
 
     # Select model (outside of form so it updates immediately)
     selected_model = st.selectbox(
-        "Select a Model Portfolio for Proposed Allocation",
+        "Select a Risk-Based Portfolio for Proposed Allocation",
         options=["Custom"] + list(models.keys()),
         index=0
     )
