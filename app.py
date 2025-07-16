@@ -2,6 +2,17 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import pandas as pd
+import seaborn as sns
+from fredapi import Fred
+
+from dotenv import load_dotenv
+import os
+
+try:
+    api_key = st.secrets["FRED_API_KEY"]
+except Exception:
+    load_dotenv()
+    api_key = os.getenv("FRED_API_KEY")
 
 from src.portfolio.portfolio_class import Portfolio
 from src.utils.charting import plot_pie
@@ -21,7 +32,8 @@ page = st.sidebar.radio(
         "Monte Carlo Simulation",
         # "Historical Backtest",
         "Stress Testing",
-        "Fund Scoring"
+        "Fund Scoring",
+        "Economic Research"
     ]
 )
 
@@ -44,11 +56,6 @@ if page == "Portfolio Analysis":
 
     with st.form("current_portfolio_form"):
         st.subheader("Define Portfolio Allocations:")
-        # selected_model = st.selectbox(
-        #     "Select a Risk-based Portfolio for Proposed Allocation",
-        #     options=["Custom"] + list(models.keys()),
-        #     index=0
-        # )
         col1, col2 = st.columns(2)
 
         with col1:
@@ -61,11 +68,6 @@ if page == "Portfolio Analysis":
         
         with col2:
             st.subheader("Proposed")
-
-            # if selected_model != "Custom":
-            #     model_alloc = models[selected_model]
-            # else:
-            #     model_alloc = {k: 0.0 for k in ["US Equity", "Intl Equity", "Emerging Markets", "Bonds", "Cash"]}
             
             disabled = selected_model != "Custom"
 
@@ -244,12 +246,120 @@ if page == "Portfolio Analysis":
 
         st.pyplot(fig_dd)
 
-
-
 if page == "Monte Carlo Simulation":
     st.title("Monte Carlo Simulation Tool for Goals Based Investing")
-    # st.caption("Estimate an asset allocation's probability of meeting a client's goals using sophisticated statistics.")
-    st.caption("Please come back later. This section of the application is still in development.")
+    st.caption("Estimate an asset allocation's probability of meeting a client's goals using sophisticated statistics.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### Define Simulation Parameters")
+        years = st.number_input("Investment Horizon (years)", 1, 99, 15, 1)
+        goal = st.number_input("Future Asset Goal", value = 10_000_000, step=10_000)
+        assets = st.number_input("Current Portfolio Value", value = 4_000_000)
+        contributions = st.number_input("Annual Contributions", value = 0)
+        withdrawls = st.number_input("Annual Withdrawals", value = 0)
+        n_sims = st.number_input("# Simulations", 1_000, 1_000_000, 10_000, 1_000)
+    with col2:
+        # --- Input: Define current portfolio allocation ---
+        st.markdown("### Define Current Portfolio Allocation")
+        dom_eq = st.slider("US Equity", 0, 100, 0)
+        intl_eq = st.slider("International Equity", 0, 100, 0)
+        em_eq = st.slider("Emerging Markets", 0, 100, 0)
+        bonds = st.slider("Fixed Income", 0, 100, 100)
+        cash = st.slider("Cash", 0, 100, 0)
+
+    current_alloc = {
+        "US Equity": dom_eq / 100,
+        "Intl Equity": intl_eq / 100,
+        "Emerging Markets": em_eq / 100,
+        "Bonds": bonds / 100,
+        "Cash": cash / 100,
+    }
+
+    if sum(current_alloc.values()) != 1:
+        st.error("Current portfolio allocation must total 100%")
+    else:
+        current_portfolio = Portfolio(name="Current", asset_allocation=current_alloc)
+        sim_results = {}
+
+        # --- Run simulation for current portfolio ---
+        sim_results["Current"] = current_portfolio.monte_carlo_goal_projection(
+            years=years,
+            goal = goal,
+            initial_value = assets,
+            num_simulations=n_sims,
+            annual_contribution = contributions,
+            annual_withdrawal = withdrawls,
+            expected_return = current_portfolio.expected_return(cme=capital_market_expectations),
+            expected_volatility= current_portfolio.expected_std(covariance_matrix=covariance_matrix),
+        )
+
+        # --- Run simulations for model portfolios ---
+        for model_name, alloc in models.items():
+            model_port = Portfolio(name=model_name, asset_allocation=alloc)
+            sim_results[model_name] = model_port.monte_carlo_goal_projection(
+                years=years,
+                goal = goal,
+                initial_value = assets,
+                num_simulations=n_sims,
+                annual_contribution = contributions,
+                annual_withdrawal = withdrawls,
+                expected_return = model_port.expected_return(cme=capital_market_expectations),
+                expected_volatility= model_port.expected_std(covariance_matrix=covariance_matrix),
+            )
+
+        # --- Create summary table ---
+        summary = []
+        for name, result in sim_results.items():
+            summary.append({
+                "Portfolio": name,
+                "Prob. of Success": f"{result['success_rate']:.2%}",
+                "Exp. Return": f"{result["exp_ret"]:.2%}",
+                "Median Ending Value": f"${result['median_ending_value']:,.0f}",
+                "5th Percentile": f"${result['5th_percentile']:,.0f}",
+                "95th Percentile": f"${result['95th_percentile']:,.0f}",
+            })
+
+        if summary:
+            summary_df = pd.DataFrame(summary).set_index("Portfolio")
+            st.subheader("Summary of Monte Carlo Results")
+            st.dataframe(summary_df)
+        else:
+            st.warning("No valid simulation results available to display.")
+        
+
+        st.markdown("###")
+        st.subheader("Distribution of Ending Portfolio Values")
+
+        # Dropdown to select portfolio to visualize
+        selected_hist = st.selectbox(
+            "Select a portfolio to visualize ending value distribution:",
+            options=list(sim_results.keys())
+        )
+
+        # Retrieve the ending values from simulation results
+        if selected_hist and "ending_values" in sim_results[selected_hist]:
+            values = sim_results[selected_hist]["ending_values"]
+            
+            fig, ax = plt.subplots(figsize=(10, 4))
+            sns.histplot(values, bins=50, kde=True, ax=ax, color="#1f77b4")
+
+            ax.axvline(goal, color="red", linestyle="--", label=f"Goal (${goal:,.0f})")
+            ax.set_xlabel("Ending Portfolio Value", fontsize=6)
+            ax.set_ylabel("Frequency", fontsize=6)
+            ax.spines["top"].set_visible(False)
+            ax.spines["bottom"].set_visible(False)
+            ax.spines["left"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.tick_params(which="both", length=0)
+            ax.xaxis.set_major_formatter(mtick.StrMethodFormatter("${x:,.0f}"))
+            ax.legend(frameon=False, fontsize=6, title=f"{selected_hist} Portfolio")
+            ax.grid(axis="y", alpha=0.3)
+            ax.tick_params(axis="both", labelsize=6)
+
+            st.pyplot(fig)
+        else:
+            st.warning("No simulation data available for this portfolio.")
 
 if page == "Historical Backtest":
     st.caption("Please come back later. This section of the application is still in development.")
@@ -259,3 +369,152 @@ if page == "Stress Testing":
 
 if page == "Fund Scoring":
     st.caption("Please come back later. This section of the application is still in development.")
+
+if page =="Economic Research":
+    st.title("Macroeconomic Research & Analysis")
+    st.caption("Regularly updated macroeconomic data series and visuals for use in conversations with clients.")
+
+    # st.subheader("Macro Data Table")
+    macro_df = pd.read_excel("monthly_macro_update.xlsx", index_col="Name")
+    # st.dataframe(macro_df)
+    
+    st.divider()
+    st.subheader("Macro Data")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("GDP", macro_df.loc["Gross Domestic Product (GDP)", "Most Recent Observation"], macro_df.loc["Gross Domestic Product (GDP)", "Percent Change"])
+    with col2:
+        st.metric("Real GDP", macro_df.loc["Real Gross Domestic Product (rGDP)", "Most Recent Observation"], macro_df.loc["Real Gross Domestic Product (rGDP)", "Percent Change"])
+    with col3:
+        st.metric("Corporate Profits", macro_df.loc["Corporate Profits (% share of GDI)", "Most Recent Observation"], macro_df.loc["Corporate Profits (% share of GDI)", "Percent Change"])
+    with col4:
+        st.metric("Manufacturing Activity", macro_df.loc["Manufacturing Activity Index (Chi. Fed Survey)", "Most Recent Observation"], macro_df.loc["Manufacturing Activity Index (Chi. Fed Survey)", "Percent Change"])
+    
+    st.markdown("###")
+    api_key = "d8dbd3216491c011edb8f42b52ee82f4"
+    fred = Fred(api_key=api_key)
+
+    gdp_raw = fred.get_series("GDPC1")
+    gdp_yoy = gdp_raw.pct_change(4).dropna()[-16:]
+    quarter_labels = [f"Q{d.quarter} '{str(d.year)[2:]}" for d in gdp_yoy.index]
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.bar(quarter_labels, gdp_yoy.values)
+
+    ax.set_ylabel("Real GDP Growth YoY", fontsize=6)
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(which="both", length=0)
+    ax.tick_params(axis="x", labelrotation=45, labelsize=6)
+    ax.tick_params(axis="y", labelsize=6)
+    ax.grid(True, axis="y", alpha=0.25)
+
+    st.pyplot(fig)
+    
+    
+    st.divider()
+    st.subheader("Consumer Data")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Consumer Sentiment", macro_df.loc["Consumer Sentiment", "Most Recent Observation"], macro_df.loc["Consumer Sentiment", "Change"])
+    with col2:
+        st.metric("Personal Savings", macro_df.loc["Personal Savings (% of Disp. Inc.)", "Most Recent Observation"], macro_df.loc["Personal Savings (% of Disp. Inc.)", "Change"])
+    with col3:
+        st.metric("New Housing Starts", macro_df.loc["New Housing Starts", "Most Recent Observation"], macro_df.loc["New Housing Starts", "Change"])
+
+    st.divider()
+    st.subheader("Inflation Data")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("CPI", macro_df.loc["Consumer Price Index (CPI)", "Most Recent Observation"], macro_df.loc["Consumer Price Index (CPI)", "Percent Change"])
+        st.metric("Core CPI", macro_df.loc["CPI ex Food & Energy (Core CPI)", "Most Recent Observation"], macro_df.loc["CPI ex Food & Energy (Core CPI)", "Percent Change"])
+    with col2:
+        st.metric("PCE", macro_df.loc["Personal Consumption Expenditures (PCE)", "Most Recent Observation"], macro_df.loc["Personal Consumption Expenditures (PCE)", "Percent Change"])
+        st.metric("PPI", macro_df.loc["Producer Price Index (PPI): All Commodities", "Most Recent Observation"], macro_df.loc["Producer Price Index (PPI): All Commodities", "Percent Change"])
+    with col3:
+        st.metric("1-Year Inflation Expectations", macro_df.loc["1-Year Expected Inflation", "Most Recent Observation"], macro_df.loc["1-Year Expected Inflation", "Percent Change"])
+        st.metric("3-Year Inflation Expectations", macro_df.loc["3-Year Expected Inflation", "Most Recent Observation"], macro_df.loc["3-Year Expected Inflation", "Percent Change"])
+    
+    st.markdown("###")
+    cpi = fred.get_series("CPIAUCSL").pct_change(12).dropna()
+    cpi_core = fred.get_series("CPILFESL").pct_change(12).dropna()
+    pce = fred.get_series("PCE").pct_change(12).dropna()
+
+    df = pd.DataFrame([cpi, cpi_core, pce]).T.dropna()
+    df.columns = ["CPI", "Core CPI", "PCE"]
+    
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.plot(df["CPI"][-48:], label = "CPI", linewidth=0.75)
+    ax.plot(df["Core CPI"][-48:], label = "Core CPI (ex Food & Energy)", linewidth=0.75)
+    ax.plot(df["PCE"][-48:], label = "PCE", linewidth=0.75)
+    ax.axhline(y=0.02, color="r", linestyle="--", label = "2% Inflation Target", linewidth=0.75)
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    xticks = df.index[-48:]
+    ax.set_xticks(xticks[::3])
+    ax.set_xticklabels([d.strftime("%b '%y") for d in xticks[::3]])
+    ax.set_ylabel("% Change YoY", fontsize=6)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(which="both", length=0)
+    ax.tick_params(axis="x", labelrotation=45, labelsize=6)
+    ax.tick_params(axis="y", labelsize=6)
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.legend(frameon=False, fontsize=6)
+
+    st.pyplot(fig)
+    st.markdown("###")
+
+    st.divider()
+    st.subheader("Labor Market Data")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Labor Force Participation", macro_df.loc["Labor Force Participation Rate", "Most Recent Observation"], macro_df.loc["Labor Force Participation Rate", "Percent Change"])
+    with col2:
+        st.metric("Unemployment Claims", macro_df.loc["Weekly Initial Claims for Unemployment", "Most Recent Observation"], macro_df.loc["Weekly Initial Claims for Unemployment", "Percent Change"])
+    with col3:
+        st.metric("Nonfarm Payrolls", macro_df.loc["Total Nonfarm Payroll", "Most Recent Observation"], macro_df.loc["Total Nonfarm Payroll", "Percent Change"])
+    with col4:
+        st.metric("Unemployment Rate", macro_df.loc["Unemployment Rate", "Most Recent Observation"], macro_df.loc["Unemployment Rate", "Percent Change"])
+
+
+    st.divider()
+    st.subheader("Interest Rates & Spread Data")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("2-Year Treasury Yield", macro_df.loc["2-Year Treasury Yield", "Most Recent Observation"], macro_df.loc["2-Year Treasury Yield", "% Change 12mo"])
+        st.metric("AAA OAS", macro_df.loc["AAA OAS", "Most Recent Observation"], macro_df.loc["AAA OAS", "% Change 12mo"]) 
+    with col2:
+        st.metric("10-Year Treasury Yield", macro_df.loc["10-Year Treasury Yield", "Most Recent Observation"], macro_df.loc["10-Year Treasury Yield", "% Change 12mo"])
+        st.metric("BB OAS", macro_df.loc["BB OAS", "Most Recent Observation"], macro_df.loc["BB OAS", "% Change 12mo"]) 
+    with col3:
+        st.metric("2s10s Spread", macro_df.loc["2s10s Spread", "Most Recent Observation"], macro_df.loc["2s10s Spread", "% Change 12mo"])
+        st.metric("CCC & Lower OAS", macro_df.loc["CCC & Lower OAS", "Most Recent Observation"], macro_df.loc["CCC & Lower OAS", "% Change 12mo"])
+    
+    hy_spreads = fred.get_series("BAMLH0A0HYM2")
+    ig_spreads = fred.get_series("BAMLC0A0CM")
+
+    spread_df = pd.DataFrame([hy_spreads, ig_spreads]).T
+    spread_df.columns = ["IG Spread", "HY Spread"]
+    spread_df = spread_df * 100
+    st.markdown("###")
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.plot(spread_df["HY Spread"][-1000:], label="High Yield OAS", linewidth=0.7)
+    ax.plot(spread_df["IG Spread"][-1000:], label="Investment Grade OAS", linewidth=0.7)
+    xticks = spread_df.index[-1000:]
+    xticks_shown = xticks[::90]
+    ax.set_xticks(xticks_shown)
+    ax.set_xticklabels([d.strftime("%b '%y") for d in xticks_shown])
+    ax.set_ylabel("Spread (bps)", fontsize=6)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(which="both", length=0)
+    ax.tick_params(axis="x", labelrotation=45, labelsize=6)
+    ax.tick_params(axis="y", labelsize=6)
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.legend(frameon=False, fontsize=6)
+
+    st.pyplot(fig)

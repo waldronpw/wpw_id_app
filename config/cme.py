@@ -7,13 +7,13 @@ models = {
         "Bonds": 0.600,
         "Cash": 0.020
     },
-    "Moderate Conservative": {
-        "US Equity": 0.320,
-        "Intl Equity": 0.140,
-        "Emerging Markets": 0.020,
-        "Bonds": 0.500,
-        "Cash": 0.020
-    },
+    # "Moderate Conservative": {
+    #     "US Equity": 0.320,
+    #     "Intl Equity": 0.140,
+    #     "Emerging Markets": 0.020,
+    #     "Bonds": 0.500,
+    #     "Cash": 0.020
+    # },
     "Moderate": {
         "US Equity": 0.380,
         "Intl Equity": 0.160,
@@ -21,13 +21,13 @@ models = {
         "Bonds": 0.400,
         "Cash": 0.020
     },
-    "Growth": {
-        "US Equity": 0.420,
-        "Intl Equity": 0.200,
-        "Emerging Markets": 0.060,
-        "Bonds": 0.300,
-        "Cash": 0.020
-    },
+    # "Growth": {
+    #     "US Equity": 0.420,
+    #     "Intl Equity": 0.200,
+    #     "Emerging Markets": 0.060,
+    #     "Bonds": 0.300,
+    #     "Cash": 0.020
+    # },
     "Aggressive": {
         "US Equity": 0.480,
         "Intl Equity": 0.220,

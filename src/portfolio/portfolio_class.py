@@ -494,10 +494,12 @@ class Portfolio:
 
             return {
                 "success_rate": round(success_rate, 4),
+                "exp_ret": expected_return,
                 "goal": round(goal, 2),
                 "median_ending_value": round(np.median(values), 2),
                 "5th_percentile": round(np.percentile(values, 5), 2),
-                "95th_percentile": round(np.percentile(values, 95), 2)
+                "95th_percentile": round(np.percentile(values, 95), 2),
+                "ending_values": values
             }
 
         except Exception as e:
