@@ -15,6 +15,7 @@ except Exception:
     api_key = os.getenv("FRED_API_KEY")
 
 from src.portfolio.portfolio_class import Portfolio
+from src.private_alts.pacing_model import pacing_model
 from src.utils.charting import plot_pie
 from config.cme import capital_market_expectations, covariance_matrix, etf_proxies, models
 
@@ -31,6 +32,7 @@ page = st.sidebar.radio(
         "Portfolio Analysis",
         "Monte Carlo Simulation",
         # "Historical Backtest",
+        "Private Alts Pacing Model",
         "Stress Testing",
         "Fund Scoring",
         "Economic Research"
@@ -56,18 +58,30 @@ if page == "Portfolio Analysis":
 
     with st.form("current_portfolio_form"):
         st.subheader("Define Portfolio Allocations:")
-        col1, col2 = st.columns(2)
-
+        col1, col2, col3 = st.columns(3)
         with col1:
-            st.subheader("Current")
-            dom_eq = st.slider("US Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
-            intl_eq = st.slider("International Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
-            em_eq = st.slider("Emerging Markets Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
-            bonds = st.slider("Fixed Income", min_value=0, max_value=100, format="%0.1f%%", value=20)
-            cash = st.slider("Cash (%)", min_value=0, max_value=100, format="%0.1f%%", value=20)
-        
+            st.subheader("###")
+            st.markdown("### US Equity")
+            st.markdown("### International Equity")
+            st.markdown("### Emerging Markets Equity")
+            st.markdown("### Fixed Income")
+            st.markdown("### Cash")
+
         with col2:
-            st.subheader("Proposed")
+            st.subheader("Portfolio 1")
+            # dom_eq = st.slider("US Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            # intl_eq = st.slider("International Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            # em_eq = st.slider("Emerging Markets Equity", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            # bonds = st.slider("Fixed Income", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            # cash = st.slider("Cash (%)", min_value=0, max_value=100, format="%0.1f%%", value=20)
+            dom_eq = st.number_input("US Equity (%)", min_value=0, max_value=100, value=int(model_alloc["US Equity"] * 100), key="us_current", width=300)
+            intl_eq = st.number_input("International Equity (%)", min_value=0, max_value=100, value=int(model_alloc["Intl Equity"] * 100), key="intl_current", width=300)
+            em_eq = st.number_input("Emerging Markets Equity (%)", min_value=0, max_value=100, value=int(model_alloc["Emerging Markets"] * 100), key="em_current", width=300)
+            bonds = st.number_input("Fixed Income (%)", min_value=0, max_value=100, value=int(model_alloc["Bonds"] * 100), key="bonds_current", width=300)
+            cash = st.number_input("Cash (%)", min_value=0, max_value=100, value=int(model_alloc["Cash"] * 100), key="cash_current", width=300)
+        
+        with col3:
+            st.subheader("Portfolio 2")
             
             disabled = selected_model != "Custom"
 
@@ -363,6 +377,56 @@ if page == "Monte Carlo Simulation":
 
 if page == "Historical Backtest":
     st.caption("Please come back later. This section of the application is still in development.")
+
+if page == "Private Alts Pacing Model":
+    st.title("Private Equity Pacing Model Simulation")
+    st.caption("Simulate a basic private equity pacing model to understand capital calls, distributions, and NAV growth over time.")
+    st.markdown("###")
+    st.subheader("Pacing Model Parameters")
+    col1, col2 = st.columns(2)
+    with col1:
+        total_aum = st.number_input("Total Investable Assets ($)", min_value=500_000, value=10_000_000, step=100_000)
+        st.caption(f"Total AUM: ${total_aum:,.0f}")
+        target_pe_alloc = st.slider("Target PE Allocation (%)", 0.0, 100.0, 10.0, step=5.0) / 100.0
+        # st.caption(f"Target PE Allocation: ${total_aum * target_pe_alloc:,.0f}")
+        initial_commitments = st.number_input("Initial Commitments ($)", min_value=0, value=500_000, step=10_000)
+        st.caption(f"Initial Commitments: ${initial_commitments:,.0f}")
+    with col2:
+        years = st.number_input("Years to Simulate", min_value=1, max_value=50, value=5, step=1)
+        call_rate = st.slider("Annual Capital Call Rate (%)", 0.0, 100.0, 25.0, step=0.1) / 100.0
+        dist_rate = st.slider("Annual Distribution Rate (%)", 0.0, 100.0, 5.0, step=0.1) / 100.0
+        growth_rate = st.slider("Annual Growth Rate on NAV (%)", 0.0, 100.0, 10.0, step=0.1) / 100.0
+    
+    if st.button("Run Pacing Model Simulation"):
+        results = pacing_model(
+            total_aum=total_aum,
+            target_pe_alloc=target_pe_alloc,
+            initial_commitments=initial_commitments,
+            years=years,
+            call_rate=call_rate,
+            dist_rate=dist_rate,
+            growth_rate=growth_rate
+        )
+
+        st.subheader("Simulation Results")
+        st.dataframe(results)
+
+        st.markdown("###")
+        st.subheader("Yearly NAV and Cashflows")
+        
+        fig, ax = plt.subplots(figsize=(10, 4))
+        results.plot(x="Year", y=["NAV", "Capital Called", "Distributions"], ax=ax)
+        
+        ax.set_xlabel("Year", fontsize=6)
+        ax.set_ylabel("Amount ($)", fontsize=6)
+        ax.yaxis.set_major_formatter(mtick.StrMethodFormatter("${x:,.0f}"))
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(which="both", length=0)
+        ax.tick_params(axis="both", labelsize=6)
+        ax.grid(True, axis="y", alpha=0.3)
+        
+        st.pyplot(fig)
 
 if page == "Stress Testing":
     st.caption("Please come back later. This section of the application is still in development.")
