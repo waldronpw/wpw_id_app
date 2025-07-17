@@ -15,7 +15,7 @@ except Exception:
     api_key = os.getenv("FRED_API_KEY")
 
 from src.portfolio.portfolio_class import Portfolio
-from src.private_alts.pacing_model import pacing_model
+from src.private_alts.pacing_model import pacing_model, plot_pacing_visual
 from src.utils.charting import plot_pie
 from config.cme import capital_market_expectations, covariance_matrix, etf_proxies, models
 
@@ -388,9 +388,14 @@ if page == "Private Alts Pacing Model":
 
     st.markdown("###")
     st.subheader("Pacing Model Results")
-    st.write(f"Future Value of Portfolio: ${results[0]:,.0f}")
-    st.write(f"Target Private Equity NAV: ${results[1]:,.0f}")
-    st.write(f"Annual Commitment to PE Sleeve: ${results[2]:,.0f}")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Future Value of Portfolio", f"${results[0]:,.0f}")
+    col2.metric("Target Private Equity NAV", f"${results[1]:,.0f}")
+    col3.metric("Annual Commitment to PE Sleeve", f"${results[2]:,.0f}")
+    st.markdown("###")
+
+    fig = plot_pacing_visual(results[3], results[1])
+    st.pyplot(fig)
 
 if page == "Stress Testing":
     st.caption("Please come back later. This section of the application is still in development.")
