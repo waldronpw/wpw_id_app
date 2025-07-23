@@ -2,4 +2,3 @@
 __pycache__/ 
 *.pyc 
 .env
-pacing_modelTEST.py
