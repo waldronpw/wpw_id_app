@@ -2,7 +2,10 @@ import streamlit as st
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(ROOT)
+sys.path.append(os.path.join(ROOT, "src"))
+sys.path.append(os.path.join(ROOT, "config"))
 
 from src.private_alts.pacing_model import pacing_model, plot_pacing_visual
 

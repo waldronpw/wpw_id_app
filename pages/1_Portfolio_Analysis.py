@@ -5,7 +5,10 @@ import matplotlib.ticker as mtick
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(ROOT)
+sys.path.append(os.path.join(ROOT, "src"))
+sys.path.append(os.path.join(ROOT, "config"))
 
 from src.portfolio.portfolio_class import Portfolio
 from config.cme import capital_market_expectations, covariance_matrix, etf_proxies, models

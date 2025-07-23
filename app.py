@@ -5,7 +5,10 @@ st.title("WPW ID App")
 
 try:
     import sys, os
-    sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+    ROOT = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(ROOT)
+    sys.path.append(os.path.join(ROOT, "src"))
+    sys.path.append(os.path.join(ROOT, "config"))
 
     st.success("Root path appended.")
     
