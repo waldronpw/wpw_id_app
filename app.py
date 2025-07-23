@@ -1,11 +1,20 @@
-# app.py
 import streamlit as st
 
-st.set_page_config(
-    page_title="WPW ID App",
-    layout="wide"
-)
+st.set_page_config(page_title="WPW ID App", layout="wide")
+st.title("WPW ID App")
 
-st.title("✅ Streamlit App Booted")
-st.info("This is a clean startup test. If you see this, Streamlit is working.")
-st.write("Use the sidebar to access pages.")
+try:
+    import sys, os
+    sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+    st.success("Root path appended.")
+    
+    from src.setup import load_macro_data
+    st.success("Imported load_macro_data successfully.")
+
+    df = load_macro_data()
+    if df is not None:
+        st.dataframe(df.head())
+
+except Exception as e:
+    st.error(f"💥 Something failed in app.py: {e}")
