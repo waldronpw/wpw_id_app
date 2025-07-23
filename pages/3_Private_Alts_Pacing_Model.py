@@ -1,5 +1,9 @@
 import streamlit as st
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src.private_alts.pacing_model import pacing_model, plot_pacing_visual
 
 st.title("Private Equity Pacing Model Simulation")

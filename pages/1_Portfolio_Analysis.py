@@ -3,6 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src.portfolio.portfolio_class import Portfolio
 from config.cme import capital_market_expectations, covariance_matrix, etf_proxies, models
 from src.utils.charting import plot_pie

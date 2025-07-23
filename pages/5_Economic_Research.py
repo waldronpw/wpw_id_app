@@ -4,6 +4,10 @@ from fredapi import Fred
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src.setup import get_fred_api_key, load_macro_data
 api_key = get_fred_api_key()
 macro_df = load_macro_data()
