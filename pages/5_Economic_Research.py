@@ -3,20 +3,31 @@ import pandas as pd
 from fredapi import Fred
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-# from dotenv import load_dotenv
-# import os
-
-# try:
-#     api_key = st.secrets["FRED_API_KEY"]
-# except Exception:
-#     load_dotenv()
-#     api_key = os.getenv("FRED_API_KEY")
 
 from src.setup import get_fred_api_key, load_macro_data
 api_key = get_fred_api_key()
 macro_df = load_macro_data()
 
 st.title("Macroeconomic Research & Analysis")
+
+try:
+    # Load FRED API key safely
+    api_key = get_fred_api_key()
+    if not api_key:
+        st.error("Missing FRED API Key")
+        st.stop()
+
+    # Load macro data
+    macro_df = load_macro_data()
+    if macro_df is None:
+        st.stop()
+
+    # Sample use
+    st.metric("GDP", macro_df.loc["Gross Domestic Product (GDP)", "Most Recent Observation"])
+
+except Exception as e:
+    st.error(f"❌ Page failed to load: {e}")
+
 st.caption("Regularly updated macroeconomic data series and visuals for use in conversations with clients.")
 
 # st.subheader("Macro Data Table")

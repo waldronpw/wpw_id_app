@@ -60,11 +60,12 @@ if ticker:
         st.divider()
         
         st.subheader("Sector Weights and Top Holdings")
+        st.markdown("####")
         col1, col2 = st.columns(2)
         sector_weights = dict(sorted(sector_weights.items(), key=lambda x: x[1]))
         sectors = list(sector_weights.keys())
         weights = [v * 100 for v in sector_weights.values()]
-        fig, ax = plt.subplots(figsize=(4, 8))
+        fig, ax = plt.subplots(figsize=(4, 4))
         ax.barh(sectors, weights)
         ax.xaxis.set_visible(False)
         ax.spines["top"].set_visible(False)

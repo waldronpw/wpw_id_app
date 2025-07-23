@@ -4,3 +4,12 @@ base="light"
 
 [server]
 headless = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+showSidebarNavigation = true
+
+[general]
+pageTitle = "Waldron Private Wealth"
