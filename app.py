@@ -1,9 +1,10 @@
 import streamlit as st
-try:
-    st.set_page_config(page_title="Waldron Private Wealth ID Team App", layout="wide")
 
-    st.title("Waldron Private Wealth")
-    st.caption("Welcome to the Investment Team Dashboard. Please use the sidebar to select a tool.")
+st.set_page_config(
+    page_title="Waldron Private Wealth",
+    page_icon="💼",
+    layout="wide"
+)
 
-except Exception as e:
-    st.error(f"🚨 App failed to load: {e}")
+st.title("Welcome to the Waldron Private Wealth App")
+st.write("👈 Use the sidebar to select a tool.")
