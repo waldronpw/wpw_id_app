@@ -3,20 +3,24 @@ import pandas as pd
 from fredapi import Fred
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-from dotenv import load_dotenv
-import os
+# from dotenv import load_dotenv
+# import os
 
-try:
-    api_key = st.secrets["FRED_API_KEY"]
-except Exception:
-    load_dotenv()
-    api_key = os.getenv("FRED_API_KEY")
+# try:
+#     api_key = st.secrets["FRED_API_KEY"]
+# except Exception:
+#     load_dotenv()
+#     api_key = os.getenv("FRED_API_KEY")
+
+from src.setup import get_fred_api_key, load_macro_data
+api_key = get_fred_api_key()
+macro_df = load_macro_data()
 
 st.title("Macroeconomic Research & Analysis")
 st.caption("Regularly updated macroeconomic data series and visuals for use in conversations with clients.")
 
 # st.subheader("Macro Data Table")
-macro_df = pd.read_excel("../monthly_macro_update.xlsx", index_col="Name")
+# macro_df = pd.read_excel("../monthly_macro_update.xlsx", index_col="Name")
 # st.dataframe(macro_df)
 
 st.divider()
