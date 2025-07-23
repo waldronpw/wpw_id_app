@@ -16,7 +16,7 @@ st.title("Macroeconomic Research & Analysis")
 st.caption("Regularly updated macroeconomic data series and visuals for use in conversations with clients.")
 
 # st.subheader("Macro Data Table")
-macro_df = pd.read_excel("monthly_macro_update.xlsx", index_col="Name")
+macro_df = pd.read_excel("../monthly_macro_update.xlsx", index_col="Name")
 # st.dataframe(macro_df)
 
 st.divider()
